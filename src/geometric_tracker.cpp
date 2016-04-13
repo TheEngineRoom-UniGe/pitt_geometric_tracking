@@ -4,6 +4,7 @@
 #include "../../pitt_object_table_segmentation/src/point_cloud_library/pc_manager.h" // for my static library
 #include "../../pitt_object_table_segmentation/src/point_cloud_library/srv_manager.h" // for my static library
 #include "tracker_library/tracker_manager.h"
+#include <limits>
 
 using namespace ros;
 using namespace pitt_msgs;
@@ -12,11 +13,11 @@ using namespace pcm;
 using namespace srvm;
 using namespace cm;
 
-#define INF 999999.0f  // infinite [m]
-#define TRACKER_FORGET_TRESHOLD 3 // time of not consecutive update (remove cluster from tracker)
+#define TRACKER_FORGET_THRESHOLD 3 // time of not consecutive update (remove cluster from tracker)
 
 typedef vector< InliersCluster> InliersClusters;
 typedef boost::shared_ptr< ClustersOutput> ClustersOutputPtr;
+static double inf = std::numeric_limits<double>::infinity();
 
 Publisher trackedClusterPub; // variable to publish the output on the call back
 boost::shared_ptr< visualization::PCLVisualizer> vis; // to visualize cloud
@@ -49,7 +50,7 @@ void initializeTracker( InliersClusters &clusters, vector< clusterManager> &trac
 }
 
 int getIndexOfMinimumElement(vector<float> d){
-	float minD = INF;
+	float minD = inf;
 	int idx = 0;
 	for( int i = 0; i < d.size(); i++)
 		if( d[ i] < minD){
@@ -61,7 +62,7 @@ int getIndexOfMinimumElement(vector<float> d){
 
 bool containsOnlyInf( vector< float> d){
 	for( int i = 0; i < d.size(); i++)
-		if( d[ i] != INF)
+		if( d[ i] != inf)
 			return false;
 	return true;
 }
@@ -93,7 +94,7 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
 					distances.push_back( d);
 					log += boost::to_string( d) + " ";
 				} else {
-					distances.push_back( INF);
+					distances.push_back( inf);
 					log += "inf ";
 				}
 			}
@@ -122,7 +123,7 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
 		for( int k = 0; k < updatedFlag.size(); k++)
 			if( ! updatedFlag[ k]){
 				updatedCnt[ k] += 1;
-				if(updatedCnt[ k] >= TRACKER_FORGET_TRESHOLD){
+				if(updatedCnt[ k] >= TRACKER_FORGET_THRESHOLD){
 					// set in the eliminate list
 					InliersCluster clusterIn = tracker[ k].getMessageInput();
 					clusterManager removed( clusterIn, tracker[ k].getClusterId(), epsilon, oldWeigth, newWeigth);
@@ -210,7 +211,7 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
 
 // main method of the node
 int main(int argc, char **argv){
-	init(argc, argv, "geometric_traker");
+	init(argc, argv, "geometric_tracker");
 	NodeHandle n;
 
 	clusterID = 0;
@@ -219,13 +220,25 @@ int main(int argc, char **argv){
 	Subscriber sub = n.subscribe ( srvm::TOPIC_OUT_NAME_OBJECT_PERCEPTION, 10, clustersAcquisition); // to the gazebo turtle kinect or real kinect
 
 	// create window to visualize cloud
-	if( SHOW_TRACKER)
-		vis = PCManager::createVisor( "Geometric Table Tracking");
+	if( SHOW_TRACKER) {
+        vis = PCManager::createVisor("Geometric Table Tracking");
+        vis->setCameraPosition(8-2.19051, 0.198678, 0.366248, -0.044886, 0.0859204, 0.471681, -0.0487582, 0.00610776, 0.998792);
+        vis->setCameraFieldOfView(0.8575);
+        vis->setCameraClipDistances(0.435734, 7.868);
+        vis->setPosition(900, 480);
+        vis->setSize(960, 540);
+    }
 
 	// set publisher
-	trackedClusterPub = n.advertise< ClustersOutput>( "geometric_traker/trackedCluster", 10); // to another
+	trackedClusterPub = n.advertise< ClustersOutput>( "geometric_tracker/trackedCluster", 10); // to another
 
-	spin();
+	//ros::Rate r(20);
+    while ( n.ok()){
+        spinOnce();
+		if( SHOW_TRACKER)
+        	vis->spinOnce();
+        //r.sleep();
+    }
 
 	return 0;
 }
