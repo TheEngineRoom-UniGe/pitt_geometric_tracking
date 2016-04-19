@@ -22,6 +22,7 @@ boost::shared_ptr< visualization::PCLVisualizer> vis; // to visualize cloud
 boost::thread vis_thread;
 boost::mutex vis_mutex;
 string log_str;
+int num_objs = 0;
 
 bool SHOW_TRACKER = true;			// open viewer with a color for every objects
 // state variable to track the previous position
@@ -48,6 +49,13 @@ void createNewTrackedCluster( InliersCluster &cl, vector< clusterManager> &track
     shapeAdd.push_back( tr);
     updatedCnt.push_back( 0);
     updatedFlag.push_back( false);
+    if( SHOW_TRACKER) {
+        string cluster_name = boost::str(boost::format("cluster_%i") %(int)tr.getClusterId());
+        boost::mutex::scoped_lock updateLock(vis_mutex);
+        if (vis->addText(cluster_name, 10, 20 + num_objs*20, 15,
+                         tr.getColorR(), tr.getColorG(), tr.getColorB()))
+            num_objs++;
+    }
 }
 
 void initializeTracker( InliersClusters &clusters, vector< clusterManager> &tracker, vector< int> &updatedCnt, vector< bool> &updatedFlag){
@@ -124,11 +132,11 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
                     // reset flag and count
                     updatedFlag[ j_star] = true;
                     updatedCnt[ j_star] = 0;
-                    ROS_INFO( " updated claster on memory %d with incoming blob %d", j_star, i);
+                    ROS_INFO( " updated cluster on memory %d with incoming blob %d", j_star, i);
                 }
             }
         }
-        // controll the count to eliminate tracked cluster that are not updated for a while
+        // control the count to eliminate tracked cluster that are not updated for a while
         for( int k = 0; k < updatedFlag.size(); k++)
             if( ! updatedFlag[ k]){
                 updatedCnt[ k] += 1;
@@ -145,7 +153,7 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
                 }
             }
 
-        // only for loggin bheaviour
+        // only for logging behaviour
         string log1 = " CNT  cluster update: (" + boost::to_string( updatedCnt.size()) + "/" + boost::to_string( tracker.size()) + ") ";
         for( int i = 0; i < updatedCnt.size(); i++)
             log1 += boost::to_string( updatedCnt[ i]) + " ";
@@ -160,9 +168,13 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
     if( SHOW_TRACKER){
         boost::mutex::scoped_lock updateLock(vis_mutex);
         for( int i = 0; i < tracker.size(); i++){
-            string clusterName = "cluster_" + tracker[i].getClusterId();
+            string clusterName = boost::str(boost::format("cluster_%i") %(int)tracker[i].getClusterId());
             PCManager::updateVisor( vis, tracker[i].getCloud(), tracker[i].getColorR(), tracker[i].getColorG(), tracker[i].getColorB(), clusterName);
             // use updateText if you plan to change the global parameters to online modifiable ros parameters
+            log_str = str(boost::format("RANGE_THRESHOLD_DEFAULT: %s    OLD_WEIGHT_DEFAULT: %s    NEW_WEIGHT_DEFAULT: %s")
+                          %clusterManager::RANGE_THRESHOLD_DEFAULT
+                          %clusterManager::OLD_WEIGHT_DEFAULT
+                          %clusterManager::NEW_WEIGHT_DEFAULT);
         }
     }
 
@@ -230,13 +242,14 @@ int main(int argc, char **argv){
     // set subscriber
     Subscriber sub = n.subscribe ( srvm::TOPIC_OUT_NAME_OBJECT_PERCEPTION, 10, clustersAcquisition); // to the gazebo turtle kinect or real kinect
 
-    log_str = str(boost::format("RANGE_THRESHOLD_DEFAULT: %s    OLD_WEIGHT_DEFAULT: %s    NEW_WEIGHT_DEFAULT: %s")
-                         %clusterManager::RANGE_THRESHOLD_DEFAULT
-                         %clusterManager::OLD_WEIGHT_DEFAULT
-                         %clusterManager::NEW_WEIGHT_DEFAULT);
-
     // create window to visualize cloud
     if( SHOW_TRACKER) {
+
+        log_str = str(boost::format("RANGE_THRESHOLD_DEFAULT: %s    OLD_WEIGHT_DEFAULT: %s    NEW_WEIGHT_DEFAULT: %s")
+                      %clusterManager::RANGE_THRESHOLD_DEFAULT
+                      %clusterManager::OLD_WEIGHT_DEFAULT
+                      %clusterManager::NEW_WEIGHT_DEFAULT);
+
         vis = PCManager::createVisor("Geometric Table Tracking");
         vis->setCameraPosition(8-2.19051, 0.198678, 0.366248, -0.044886, 0.0859204, 0.471681, -0.0487582, 0.00610776, 0.998792);
         vis->setCameraFieldOfView(0.8575);
@@ -255,6 +268,9 @@ int main(int argc, char **argv){
         spinOnce();
         //r.sleep();
     }
-
+    if (SHOW_TRACKER){
+        vis->close();
+        vis_thread.join();
+    }
     return 0;
 }
