@@ -9,15 +9,11 @@
 
 namespace cm {
 
-	const float clusterManager::RANGE_THRESHOLD_DEFAULT = 0.01f; //[m]
-	const float clusterManager::OLD_WEIGHT_DEFAULT = 1.0f;
-	const float clusterManager::NEW_WEIGHT_DEFAULT = 1.0f;
 
-	clusterManager::clusterManager( InliersCluster clusterIn, long id){
-		initialize(clusterIn, id, RANGE_THRESHOLD_DEFAULT, OLD_WEIGHT_DEFAULT, NEW_WEIGHT_DEFAULT);
-	}
-	clusterManager::clusterManager( InliersCluster clusterIn, long id, float rangeTH, float old_weigth, float new_weigth){
-		initialize( clusterIn, id, rangeTH, old_weigth, new_weigth);
+
+	clusterManager::clusterManager( InliersCluster clusterIn, long id,
+                                    float rangeThreshold, float oldConfidenceWeight, float newConfidenceWeight){
+		initialize(clusterIn, id, rangeThreshold, oldConfidenceWeight, newConfidenceWeight);
 	}
 	void clusterManager::initialize( InliersCluster clusterIn, long id, float rangeTH, float old_weigth, float new_weigth){
 		// store for eventualy late use

@@ -11,11 +11,23 @@ using namespace pcm;
 using namespace srvm;
 using namespace cm;
 
-#define TRACKER_FORGET_THRESHOLD 3 // time of not consecutive update (remove cluster from tracker)
+const int TRACKER_FORGET_THRESHOLD_DEFAULT = 3; // time of not consecutive update (remove cluster from tracker)
+const float RANGE_THRESHOLD_DEFAULT = 0.20f; // Radios [m] of the sphere centered in a old object centroid. In which, if an object is in it, than it will have the same ID (recognition traking)
+const float OLD_WEIGHT_DEFAULT = 0.6f; // to compute the new position of the object (weighted mean) between the previous and the new data
+const float NEW_WEIGHT_DEFAULT = 0.4f; // to compute the new position of the object (weighted mean) between the previous and the new data
+
+float epsilon, oldWeight, newWeight;
+
+const string PARAM_NAME_TRACKER_FORGET_THRESHOLD = "/pitt/srv/geometric_tracker/tracker_forget_threshold";
+const string PARAM_NAME_RANGE_THRESHOLD_DEFAULT = "/pitt/srv/geometric_tracker/range_threshold";
+const string PARAM_NAME_OLD_WEIGHT_DEFAULT = "/pitt/srv/geometric_tracker/confidence_weight_old";
+const string PARAM_NAME_NEW_WEIGHT_DEFAULT = "/pitt/srv/geometric_tracker/confiddence_weight_new";
 
 typedef vector< InliersCluster> InliersClusters;
 typedef boost::shared_ptr< ClustersOutput> ClustersOutputPtr;
 static double inf = std::numeric_limits<double>::infinity();
+
+ros::NodeHandle* nh_ptr = NULL;
 
 Publisher trackedClusterPub; // variable to publish the output on the call back
 boost::shared_ptr< visualization::PCLVisualizer> vis; // to visualize cloud
@@ -25,9 +37,6 @@ string log_str;
 int num_objs = 0;
 
 bool SHOW_TRACKER = true;			// open viewer with a color for every objects
-// state variable to track the previous position
-float epsilon = 0.20f; // Radios [m] of the sphere centered in a old object centroid. In which, if an object is in it, than it will have the same ID (recognition traking)
-float oldWeigth = 0.6f, newWeigth = 0.4f; // to compute the new position of the object (weighted mean) between the previous and the new data
 
 static long clusterID; // can overflow ???????????????????????????????'
 
@@ -44,7 +53,7 @@ void visSpin(){
 }
 
 void createNewTrackedCluster( InliersCluster &cl, vector< clusterManager> &tracker, vector< int> &updatedCnt, vector< bool> &updatedFlag){
-    clusterManager tr( cl, clusterID++, epsilon, oldWeigth, newWeigth);
+    clusterManager tr( cl, clusterID++, epsilon, oldWeight, newWeight);
     tracker.push_back( tr);
     shapeAdd.push_back( tr);
     updatedCnt.push_back( 0);
@@ -84,8 +93,17 @@ bool containsOnlyInf( vector< float> d){
     return true;
 }
 
-// TRAKING CALLBACK
+// TRACKING CALLBACK
 void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
+
+    int forgetThreshold;
+
+    // update ros parameters
+    nh_ptr->param(PARAM_NAME_TRACKER_FORGET_THRESHOLD, forgetThreshold, TRACKER_FORGET_THRESHOLD_DEFAULT);
+    nh_ptr->param(PARAM_NAME_RANGE_THRESHOLD_DEFAULT, epsilon, RANGE_THRESHOLD_DEFAULT);
+    nh_ptr->param(PARAM_NAME_OLD_WEIGHT_DEFAULT, oldWeight, OLD_WEIGHT_DEFAULT);
+    nh_ptr->param(PARAM_NAME_NEW_WEIGHT_DEFAULT, newWeight, NEW_WEIGHT_DEFAULT);
+
     // get input
     InliersClusters clusters = clusterObj->clusterObjs;
     // reset tracker changes
@@ -137,13 +155,14 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
             }
         }
         // control the count to eliminate tracked cluster that are not updated for a while
+
         for( int k = 0; k < updatedFlag.size(); k++)
             if( ! updatedFlag[ k]){
                 updatedCnt[ k] += 1;
-                if(updatedCnt[ k] >= TRACKER_FORGET_THRESHOLD){
+                if(updatedCnt[ k] >= forgetThreshold){
                     // set in the eliminate list
                     InliersCluster clusterIn = tracker[ k].getMessageInput();
-                    clusterManager removed( clusterIn, tracker[ k].getClusterId(), epsilon, oldWeigth, newWeigth);
+                    clusterManager removed( clusterIn, tracker[ k].getClusterId(), epsilon, oldWeight, newWeight);
                     shapeRemove.push_back( removed);
                     // eliminate cluster tracked in memory
                     tracker.erase( tracker.begin() + k);
@@ -171,10 +190,10 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
             string clusterName = boost::str(boost::format("cluster_%i") %(int)tracker[i].getClusterId());
             PCManager::updateVisor( vis, tracker[i].getCloud(), tracker[i].getColorR(), tracker[i].getColorG(), tracker[i].getColorB(), clusterName);
             // use updateText if you plan to change the global parameters to online modifiable ros parameters
-            log_str = str(boost::format("RANGE_THRESHOLD_DEFAULT: %s    OLD_WEIGHT_DEFAULT: %s    NEW_WEIGHT_DEFAULT: %s")
-                          %clusterManager::RANGE_THRESHOLD_DEFAULT
-                          %clusterManager::OLD_WEIGHT_DEFAULT
-                          %clusterManager::NEW_WEIGHT_DEFAULT);
+            log_str = str(boost::format("TRACKER_FORGET_THRESHOLD: %s    RANGE_THRESHOLD: %s    "
+                                                "OLD_WEIGHT: %s    NEW_WEIGHT: %s")
+                          %forgetThreshold %epsilon %oldWeight %newWeight);
+            vis->updateText(log_str, 10, 520, "log_str");
         }
     }
 
@@ -235,20 +254,23 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
 // main method of the node
 int main(int argc, char **argv){
     init(argc, argv, "geometric_tracker");
-    NodeHandle n;
+    ros::NodeHandle nh;
+    nh_ptr = &nh;
 
     clusterID = 0;
 
     // set subscriber
-    Subscriber sub = n.subscribe ( srvm::TOPIC_OUT_NAME_OBJECT_PERCEPTION, 10, clustersAcquisition); // to the gazebo turtle kinect or real kinect
+    Subscriber sub = nh.subscribe ( srvm::TOPIC_OUT_NAME_OBJECT_PERCEPTION, 10, clustersAcquisition); // to the gazebo turtle kinect or real kinect
 
     // create window to visualize cloud
     if( SHOW_TRACKER) {
 
-        log_str = str(boost::format("RANGE_THRESHOLD_DEFAULT: %s    OLD_WEIGHT_DEFAULT: %s    NEW_WEIGHT_DEFAULT: %s")
-                      %clusterManager::RANGE_THRESHOLD_DEFAULT
-                      %clusterManager::OLD_WEIGHT_DEFAULT
-                      %clusterManager::NEW_WEIGHT_DEFAULT);
+        log_str = str(boost::format("TRACKER_FORGET_THRESHOLD: %s    RANGE_THRESHOLD: %s    "
+                                            "OLD_WEIGHT: %s    NEW_WEIGHT: %s")
+                      %TRACKER_FORGET_THRESHOLD_DEFAULT
+                      %RANGE_THRESHOLD_DEFAULT
+                      %OLD_WEIGHT_DEFAULT
+                      %NEW_WEIGHT_DEFAULT);
 
         vis = PCManager::createVisor("Geometric Table Tracking");
         vis->setCameraPosition(8-2.19051, 0.198678, 0.366248, -0.044886, 0.0859204, 0.471681, -0.0487582, 0.00610776, 0.998792);
@@ -261,10 +283,10 @@ int main(int argc, char **argv){
     }
 
     // set publisher
-    trackedClusterPub = n.advertise< ClustersOutput>( "geometric_tracker/trackedCluster", 10); // to another
+    trackedClusterPub = nh.advertise< ClustersOutput>( "geometric_tracker/trackedCluster", 10); // to another
 
     //ros::Rate r(20);
-    while ( n.ok()){
+    while ( nh.ok()){
         spinOnce();
         //r.sleep();
     }

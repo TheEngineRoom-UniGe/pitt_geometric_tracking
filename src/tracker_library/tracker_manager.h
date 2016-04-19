@@ -37,7 +37,6 @@ class clusterManager {
 		void initialize( InliersCluster clusterIn, long id, float epsilon, float oldWeigth, float newWeigth);
 
 	public:
-		clusterManager( InliersCluster clusterIn, long id);
 		clusterManager( InliersCluster clusterIn, long id, float epsilon, float oldWeigth, float newWeigth); // constructor
 		virtual ~clusterManager(); // deconstructor
 
