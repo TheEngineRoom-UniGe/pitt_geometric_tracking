@@ -67,9 +67,9 @@ class clusterManager {
 		bool getMinimumDistanceIdx( int &idx);
 
 
-		static const float RANGE_THRESHOULD_DEFAULT;
-		static const float OLD_WEIGTH_DEFAULT;
-		static const float NEW_WEIGTH_DEFAULT;
+		static const float RANGE_THRESHOLD_DEFAULT;
+		static const float OLD_WEIGHT_DEFAULT;
+		static const float NEW_WEIGHT_DEFAULT;
 	};
 
 } /* namespace cm */
