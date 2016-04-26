@@ -21,7 +21,7 @@ float epsilon, oldWeight, newWeight;
 const string PARAM_NAME_TRACKER_FORGET_THRESHOLD = "/pitt/srv/geometric_tracker/tracker_forget_threshold";
 const string PARAM_NAME_RANGE_THRESHOLD_DEFAULT = "/pitt/srv/geometric_tracker/range_threshold";
 const string PARAM_NAME_OLD_WEIGHT_DEFAULT = "/pitt/srv/geometric_tracker/confidence_weight_old";
-const string PARAM_NAME_NEW_WEIGHT_DEFAULT = "/pitt/srv/geometric_tracker/confiddence_weight_new";
+const string PARAM_NAME_NEW_WEIGHT_DEFAULT = "/pitt/srv/geometric_tracker/confidence_weight_new";
 
 typedef vector< InliersCluster> InliersClusters;
 typedef boost::shared_ptr< ClustersOutput> ClustersOutputPtr;
@@ -105,7 +105,7 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
     nh_ptr->param(PARAM_NAME_NEW_WEIGHT_DEFAULT, newWeight, NEW_WEIGHT_DEFAULT);
 
     // get input
-    InliersClusters clusters = clusterObj->clusterObjs;
+    InliersClusters clusters = clusterObj->cluster_objs;
     // reset tracker changes
     shapeAdd.clear();
     shapeRemove.clear();
@@ -211,7 +211,7 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
             outCl.shape_id = (int)tracker[ j].getClusterId();
 
             // append this cluster to output
-            trackedClustersObject->clusterObjs.push_back( outCl);
+            trackedClustersObject->cluster_objs.push_back( outCl);
         }
     }
     if( shapeAdd.size() > 0){
