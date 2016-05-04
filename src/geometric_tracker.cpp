@@ -11,10 +11,10 @@ using namespace pcm;
 using namespace srvm;
 using namespace cm;
 
-const int TRACKER_FORGET_THRESHOLD_DEFAULT = 3; // time of not consecutive update (remove cluster from tracker)
-const float RANGE_THRESHOLD_DEFAULT = 0.20f; // Radios [m] of the sphere centered in a old object centroid. In which, if an object is in it, than it will have the same ID (recognition traking)
-const float OLD_WEIGHT_DEFAULT = 0.6f; // to compute the new position of the object (weighted mean) between the previous and the new data
-const float NEW_WEIGHT_DEFAULT = 0.4f; // to compute the new position of the object (weighted mean) between the previous and the new data
+const int DEFAULT_TRACKER_FORGET_THRESHOLD = 3; // time of not consecutive update (remove cluster from tracker)
+const float DEFAULT_RANGE_THRESHOLD = 0.20f; // Radios [m] of the sphere centered in a old object centroid. In which, if an object is in it, than it will have the same ID (recognition traking)
+const float DEFAULT_OLD_WEIGHT = 0.6f; // to compute the new position of the object (weighted mean) between the previous and the new data
+const float DEGAULT_NEW_WEIGHT = 0.4f; // to compute the new position of the object (weighted mean) between the previous and the new data
 
 float epsilon, oldWeight, newWeight;
 
@@ -36,7 +36,8 @@ boost::mutex vis_mutex;
 string log_str;
 int num_objs = 0;
 
-bool SHOW_TRACKER = true;			// open viewer with a color for every objects
+const bool DEFAULT_SHOW_TRACKER = false;
+bool SHOW_TRACKER;			// open viewer with a color for every objects
 
 static long clusterID; // can overflow ???????????????????????????????'
 
@@ -99,10 +100,10 @@ void clustersAcquisition(const ClustersOutputConstPtr& clusterObj){
     int forgetThreshold;
 
     // update ros parameters
-    nh_ptr->param(PARAM_NAME_TRACKER_FORGET_THRESHOLD, forgetThreshold, TRACKER_FORGET_THRESHOLD_DEFAULT);
-    nh_ptr->param(PARAM_NAME_RANGE_THRESHOLD_DEFAULT, epsilon, RANGE_THRESHOLD_DEFAULT);
-    nh_ptr->param(PARAM_NAME_OLD_WEIGHT_DEFAULT, oldWeight, OLD_WEIGHT_DEFAULT);
-    nh_ptr->param(PARAM_NAME_NEW_WEIGHT_DEFAULT, newWeight, NEW_WEIGHT_DEFAULT);
+    nh_ptr->param(PARAM_NAME_TRACKER_FORGET_THRESHOLD, forgetThreshold, DEFAULT_TRACKER_FORGET_THRESHOLD);
+    nh_ptr->param(PARAM_NAME_RANGE_THRESHOLD_DEFAULT, epsilon, DEFAULT_RANGE_THRESHOLD);
+    nh_ptr->param(PARAM_NAME_OLD_WEIGHT_DEFAULT, oldWeight, DEFAULT_OLD_WEIGHT);
+    nh_ptr->param(PARAM_NAME_NEW_WEIGHT_DEFAULT, newWeight, DEGAULT_NEW_WEIGHT);
 
     // get input
     InliersClusters clusters = clusterObj->cluster_objs;
@@ -258,6 +259,7 @@ int main(int argc, char **argv){
     nh_ptr = &nh;
 
     clusterID = 0;
+    SHOW_TRACKER = srvm::getBoolPtrParameter(argv[1], DEFAULT_SHOW_TRACKER);
 
     // set subscriber
     Subscriber sub = nh.subscribe ( srvm::TOPIC_OUT_NAME_OBJECT_PERCEPTION, 10, clustersAcquisition); // to the gazebo turtle kinect or real kinect
@@ -267,10 +269,10 @@ int main(int argc, char **argv){
 
         log_str = str(boost::format("TRACKER_FORGET_THRESHOLD: %s    RANGE_THRESHOLD: %s    "
                                             "OLD_WEIGHT: %s    NEW_WEIGHT: %s")
-                      %TRACKER_FORGET_THRESHOLD_DEFAULT
-                      %RANGE_THRESHOLD_DEFAULT
-                      %OLD_WEIGHT_DEFAULT
-                      %NEW_WEIGHT_DEFAULT);
+                      %DEFAULT_TRACKER_FORGET_THRESHOLD
+                      %DEFAULT_RANGE_THRESHOLD
+                      %DEFAULT_OLD_WEIGHT
+                      %DEGAULT_NEW_WEIGHT);
 
         vis = PCManager::createVisor("Geometric Table Tracking");
         vis->setCameraPosition(8-2.19051, 0.198678, 0.366248, -0.044886, 0.0859204, 0.471681, -0.0487582, 0.00610776, 0.998792);
