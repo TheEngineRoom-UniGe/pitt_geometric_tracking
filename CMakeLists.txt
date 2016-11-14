@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
    sensor_msgs
    pitt_msgs
 )
+find_package(PCL REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -103,19 +104,22 @@ catkin_package(
 # include_directories(include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
 )
+
+link_directories(${PCL_LIBRARY_DIRS})
 
 ## Declare a cpp library
 add_library(pc_manager_tracker ../pitt_object_table_segmentation/src/point_cloud_library/pc_manager.cpp)
 add_library(pc_primitive_tracker ../pitt_object_table_segmentation/src/point_cloud_library/pc_primitive.cpp)
 add_library(tracker_manager src/tracker_library/tracker_manager.cpp)
-target_link_libraries(pc_manager_tracker pc_primitive_tracker ${catkin_LIBRARIES} vtkCommon vtkFiltering)
-target_link_libraries(tracker_manager pc_manager_tracker pc_primitive_tracker ${catkin_LIBRARIES} vtkCommon vtkFiltering)
+target_link_libraries(pc_manager_tracker pc_primitive_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(tracker_manager pc_manager_tracker pc_primitive_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 
 # geometric tracker node
 add_executable(geometric_tracker src/geometric_tracker.cpp)
-target_link_libraries(geometric_tracker tracker_manager pc_manager_tracker ${catkin_LIBRARIES} libvtkCommon.so libvtkFiltering.so)
+target_link_libraries(geometric_tracker tracker_manager pc_manager_tracker ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_dependencies(geometric_tracker pitt_object_table_segmentation pitt_msgs_generate_messages_cpp)
 
 
