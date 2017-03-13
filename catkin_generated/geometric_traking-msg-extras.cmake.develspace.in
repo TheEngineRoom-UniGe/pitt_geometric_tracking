@@ -1,2 +1,0 @@
-set(geometric_traking_MESSAGE_FILES "/home/luca-phd/catkin_ws/src/geometric_traking/msg/TrackedShapes.msg;/home/luca-phd/catkin_ws/src/geometric_traking/msg/TrackedShape.msg")
-set(geometric_traking_SERVICE_FILES "")
