@@ -1,0 +1,8 @@
+prefix=/usr/local
+
+Name: geometric_traking
+Description: Description of geometric_traking
+Version: 0.0.0
+Cflags: -I/usr/local/include
+Libs: -L/usr/local/lib 
+Requires: pcl_conversions roscpp sensor_msgs
