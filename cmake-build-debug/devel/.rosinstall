@@ -1,2 +1,2 @@
 - setup-file:
-    local-name: /home/carlotta/catkin_ws/src/pitt_geometric_tracking/cmake-build-debug/devel/setup.sh
+    local-name: /home/carlotta/catkin_ws/src/PITT/pitt_geometric_tracking/cmake-build-debug/devel/setup.sh
