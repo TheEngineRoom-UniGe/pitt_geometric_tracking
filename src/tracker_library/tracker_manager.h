@@ -14,7 +14,7 @@
 using namespace pitt_msgs;
 using namespace pcm;
 
-typedef pcl::PointCloud< pcl::PointXYZ>::Ptr PCLCloudPtr;				// for point cloud smart pointer
+typedef pcl::PointCloud< pcl::PointXYZRGB>::Ptr PCLCloudPtr;				// for point cloud smart pointer
 typedef vector< InliersCluster> InliersClusters;
 typedef boost::shared_ptr< float> DistancesPtr;			// for the list of the primitives
 
